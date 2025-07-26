@@ -155,20 +155,33 @@ const PreferencesForm = ({ onSubmit }) => {
   // Submit and get results
   const getRecommendations = async () => {
     setIsLoading(true)
-    // Compose preferences object
-    const preferences = {
-      budget,
-      dietaryRestrictions: hasDietary ? dietaryText : '',
-      optionalPreferences: optionalQuestions.reduce((acc, q) => {
-        if (q.answer.trim()) {
-          acc[q.id] = q.answer.trim()
-        }
-        return acc
-      }, {})
-    }
+    
+    // Send POST request to webhook with current prompt
     try {
-      const res = await onSubmit(preferences)
-      setResults(res)
+      console.log('Sending POST request with prompt:', currentPrompt)
+      const response = await fetch('https://rb897.app.n8n.cloud/webhook/ff5b02ab-6cca-40ae-a620-2722f0d57eb9', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query: currentPrompt })
+      })
+      
+      const responseData = await response.json()
+      console.log('Webhook response:', responseData)
+      
+      // Set the webhook response as results and go to results page
+      if (responseData) {
+        setResults(Array.isArray(responseData) ? responseData : [responseData])
+        setStep(4)
+      } else {
+        console.error('No data received from webhook')
+        setResults([])
+        setStep(4)
+      }
+    } catch (error) {
+      console.error('Error sending POST request to webhook:', error)
+      setResults([])
       setStep(4)
     } finally {
       setIsLoading(false)
@@ -358,27 +371,72 @@ const PreferencesForm = ({ onSubmit }) => {
         </div>
         {/* Screen 5: Results */}
         <div className={`absolute inset-0 transition-transform duration-500 ${step === 4 ? 'translate-x-0 opacity-100 z-10' : 'translate-x-full opacity-0 z-0'}`}>
-          <div className="flex flex-col items-center justify-center h-full w-full">
+          <div className="flex flex-col items-center justify-center h-full w-full p-6">
             {isLoading ? (
               <div className="text-center py-12">
-                <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mb-4"></div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-2">Finding Perfect Restaurants</h2>
-                <p className="text-gray-600">AI is analyzing your preferences...</p>
+                <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                <h2 className="text-xl font-semibold text-gray-900 mb-2" style={{ fontFamily: 'Instrument Serif, serif' }}>Finding Perfect Restaurants</h2>
+                <p className="text-gray-600" style={{ fontFamily: 'Inter, sans-serif' }}>AI is analyzing your preferences...</p>
               </div>
             ) : results && results.length > 0 ? (
-              <div className="w-full">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Here are some places you might like:</h2>
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  {results.map(r => (
-                    <a key={r.id} href={r.reservationLink} target="_blank" rel="noopener noreferrer" className="block">
-                      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-                        <div className="text-lg font-semibold mb-2">{r.name}</div>
-                        <div className="text-gray-600 text-sm mb-1">{r.address}</div>
-                        <div className="text-sm text-gray-700 mb-2">{r.cuisine} &bull; {r.priceRange}</div>
-                        <div className="text-xs text-gray-500">{r.matchReasoning}</div>
+              <div className="w-full max-w-4xl">
+                <h2 className="text-3xl font-bold text-gray-900 mb-2 text-center" style={{ fontFamily: 'Instrument Serif, serif' }}>Here's what I found</h2>
+                <div className="text-gray-600 mb-8 text-center" style={{ fontFamily: 'Inter, sans-serif', fontSize: '16px' }}>
+                  Based on your preferences: "{currentPrompt}"
+                </div>
+                <div className="space-y-6">
+                  {results.map((restaurant, index) => (
+                    <div key={index} className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-lg transition-shadow">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex-1">
+                          <h3 className="text-xl font-semibold text-gray-900 mb-2" style={{ fontFamily: 'Instrument Serif, serif' }}>
+                            {restaurant.name}
+                          </h3>
+                          <p className="text-gray-600 mb-1" style={{ fontFamily: 'Inter, sans-serif' }}>
+                            {restaurant.address}
+                          </p>
+                          <div className="flex items-center gap-4 text-sm text-gray-600" style={{ fontFamily: 'Inter, sans-serif' }}>
+                            <span>{restaurant.cuisine}</span>
+                            <span>{restaurant.budget_level}</span>
+                            {restaurant.budget_for_two && <span>{restaurant.budget_for_two} for two</span>}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="flex items-center mb-2">
+                            <span className="text-yellow-500 mr-1">★</span>
+                            <span className="font-semibold" style={{ fontFamily: 'Inter, sans-serif' }}>{restaurant.rating}</span>
+                          </div>
+                          {restaurant.open_now !== undefined && (
+                            <div className={`text-sm px-2 py-1 rounded-full ${restaurant.open_now ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`} style={{ fontFamily: 'Inter, sans-serif' }}>
+                              {restaurant.open_now ? 'Open now' : 'Closed'}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </a>
+                      
+                      {restaurant.location && (
+                        <div className="text-sm text-gray-500 mb-3" style={{ fontFamily: 'Inter, sans-serif' }}>
+                          📍 {restaurant.location}
+                        </div>
+                      )}
+                      
+                      {restaurant.timestamp && (
+                        <div className="text-xs text-gray-400" style={{ fontFamily: 'Inter, sans-serif' }}>
+                          Last updated: {new Date(restaurant.timestamp).toLocaleString()}
+                        </div>
+                      )}
+                    </div>
                   ))}
+                </div>
+                
+                <div className="text-center mt-8">
+                  <button 
+                    onClick={() => setStep(0)}
+                    className="text-blue-600 hover:text-blue-800 underline"
+                    style={{ fontFamily: 'Inter, sans-serif' }}
+                  >
+                    ← Start over
+                  </button>
                 </div>
               </div>
             ) : (
@@ -388,8 +446,15 @@ const PreferencesForm = ({ onSubmit }) => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No restaurants found</h3>
-                <p className="text-gray-600 mb-4">Try adjusting your preferences to see more options.</p>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2" style={{ fontFamily: 'Instrument Serif, serif' }}>No restaurants found</h3>
+                <p className="text-gray-600 mb-4" style={{ fontFamily: 'Inter, sans-serif' }}>Try adjusting your preferences to see more options.</p>
+                <button 
+                  onClick={() => setStep(0)}
+                  className="text-blue-600 hover:text-blue-800 underline"
+                  style={{ fontFamily: 'Inter, sans-serif' }}
+                >
+                  ← Start over
+                </button>
               </div>
             )}
           </div>
