@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **QuickMeet Restaurant Finder** - A 4-hour MVP for instant restaurant discovery using AI-powered recommendations. This is a direct-access web application that collects user preferences through a simple form and provides Claude-curated restaurant recommendations with reservation links.
 
 ## Tech Stack & Architecture
-
+yes, 
 - **Frontend**: Vite.js + Next.js with Tailwind CSS
 - **Data Pipeline**: n8n workflows for Google Business scraping and review extraction
 - **AI Integration**: Anthropic Claude API for restaurant scoring and recommendation reasoning
