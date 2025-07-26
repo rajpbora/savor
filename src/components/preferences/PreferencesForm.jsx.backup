@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import BudgetRange from './BudgetRange'
 import claudeService from '../../utils/claude'
 
-// Add Instrument Serif font to heading and serif tex            <div className="text-gray-700 mb-12 mt-2 text-center font-light whitespace-pre-line" style={{ fontFamily: 'Inter, sans-serif', fontSize: '16px' }}>"{currentPrompt}"</div>
+// Add Instrument Serif font to heading and serif text
 const PreferencesForm = ({ onSubmit }) => {
   // Carousel step: 0 = budget, 1 = dietary q, 2 = dietary text, 3 = optional questions, 4 = results
   const [step, setStep] = useState(0)
@@ -17,7 +17,6 @@ const PreferencesForm = ({ onSubmit }) => {
   const [optionalQuestions, setOptionalQuestions] = useState([])
   const [availableQuestions, setAvailableQuestions] = useState([])
   const [questionsLoading, setQuestionsLoading] = useState(false)
-  const [currentPrompt, setCurrentPrompt] = useState("I want to find a place to eat")
   
   // Generate questions when component mounts
   useEffect(() => {
@@ -56,51 +55,6 @@ const PreferencesForm = ({ onSubmit }) => {
       setQuestionsLoading(false)
     }
   }
-
-  // Helper function to map budget to descriptive text
-  const getBudgetText = (budgetLevel) => {
-    const budgetMap = {
-      '$': 'cheap',
-      '$$': 'affordable',
-      '$$$': 'nice',
-      '$$$$': 'upscale',
-      '$$$$$': 'expensive'
-    }
-    return budgetMap[budgetLevel] || 'a'
-  }
-
-  // Helper function to update the dynamic prompt
-  const updatePrompt = () => {
-    let prompt = "I want to find a"
-    
-    // Add budget description
-    if (budget) {
-      prompt += ` ${getBudgetText(budget)}`
-    }
-    
-    prompt += " place to eat"
-    
-    // Add dietary restrictions if specified
-    if (hasDietary && dietaryText.trim()) {
-      prompt += ` with these dietary preferences: ${dietaryText.trim()}`
-    }
-    
-    // Add optional questions
-    const answeredQuestions = optionalQuestions.filter(q => q.answer.trim())
-    if (answeredQuestions.length > 0) {
-      prompt += "\n\nHere are some further preferences:\n"
-      answeredQuestions.forEach(q => {
-        prompt += `${q.text.replace('?', '')}: ${q.answer.trim()}\n`
-      })
-    }
-    
-    setCurrentPrompt(prompt)
-  }
-
-  // Update prompt whenever relevant state changes
-  useEffect(() => {
-    updatePrompt()
-  }, [budget, hasDietary, dietaryText, optionalQuestions])
 
   // Handle budget select
   const handleBudgetChange = (val) => {
@@ -254,7 +208,7 @@ const PreferencesForm = ({ onSubmit }) => {
         {/* Screen 3: Dietary Text (if yes) */}
         <div className={`absolute inset-0 transition-transform duration-500 ${step === 2 ? 'translate-x-0 opacity-100 z-10' : step < 2 ? 'translate-x-full opacity-0 z-0' : '-translate-x-full opacity-0 z-0'}`}>
           <div className="flex flex-col items-center justify-center h-full">
-            <div className="text-lg text-gray-700 mb-8 mt-8 whitespace-pre-line" style={{ fontFamily: 'Instrument Serif, serif', fontSize: '24px', color: '#000' }}>"{currentPrompt}"</div>
+            <div className="text-lg text-gray-700 mb-8 mt-8" style={{ fontFamily: 'Instrument Serif, serif', fontSize: '24px', color: '#000' }}>I want to find a place to eat, that has <span className="text-primary-700">non-peanut food options</span></div>
             <textarea
               className="form-input w-full max-w-md h-24 mb-4"
               placeholder="Vegan, gluten-free, lactose intolerant..."
@@ -272,11 +226,6 @@ const PreferencesForm = ({ onSubmit }) => {
         {/* Screen 4: Optional Questions */}
         <div className={`absolute inset-0 transition-transform duration-500 ${step === 3 ? 'translate-x-0 opacity-100 z-10' : step < 3 ? 'translate-x-full opacity-0 z-0' : '-translate-x-full opacity-0 z-0'}`}>
           <div className="flex flex-col items-center justify-center h-full px-8">
-            {/* Show current prompt */}
-            <div className="text-center mb-6">
-              <div className="text-gray-700 mb-4 text-center font-light whitespace-pre-line" style={{ fontFamily: 'Inter, sans-serif', fontSize: '16px' }}>"{currentPrompt}"</div>
-            </div>
-            
             <div className="text-center mb-8">
               <div className="text-lg mb-4" style={{ fontFamily: 'Instrument Serif, serif', fontSize: '24px', color: '#000' }}>
                 Want to help me find something even more perfect?
