@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import BudgetRange from './BudgetRange'
+import claudeService from '../../utils/claude'
 
 // Add Instrument Serif font to heading and serif text
 const PreferencesForm = ({ onSubmit }) => {
@@ -14,15 +15,46 @@ const PreferencesForm = ({ onSubmit }) => {
   const [results, setResults] = useState(null)
   const [hovered, setHovered] = useState(null)
   const [optionalQuestions, setOptionalQuestions] = useState([])
+  const [availableQuestions, setAvailableQuestions] = useState([])
+  const [questionsLoading, setQuestionsLoading] = useState(false)
   
-  // Available optional questions
-  const availableQuestions = [
-    { id: 'atmosphere', text: 'What atmosphere are you looking for?', placeholder: 'Casual, romantic, family-friendly, lively...' },
-    { id: 'occasion', text: 'What\'s the occasion?', placeholder: 'Date night, business meeting, celebration...' },
-    { id: 'group', text: 'Who are you dining with?', placeholder: 'Solo, couple, family, large group...' },
-    { id: 'cuisine', text: 'Any specific cuisine preferences?', placeholder: 'Italian, Asian, Mexican, local specialties...' },
-    { id: 'features', text: 'Any special features you want?', placeholder: 'Outdoor seating, live music, bar area...' }
-  ];
+  // Generate questions when component mounts
+  useEffect(() => {
+    generateInitialQuestions()
+  }, [])
+
+  // Generate initial set of 3 questions
+  const generateInitialQuestions = async () => {
+    setQuestionsLoading(true)
+    try {
+      const newQuestions = await claudeService.generateOptionalQuestions([], 3)
+      setAvailableQuestions(newQuestions)
+    } catch (error) {
+      console.error('Error generating initial questions:', error)
+      // Fallback to default questions if API fails
+      setAvailableQuestions([
+        { id: 'atmosphere', text: 'What atmosphere are you looking for?', placeholder: 'Casual, romantic, family-friendly, lively...' },
+        { id: 'occasion', text: 'What\'s the occasion?', placeholder: 'Date night, business meeting, celebration...' },
+        { id: 'group', text: 'Who are you dining with?', placeholder: 'Solo, couple, family, large group...' }
+      ])
+    } finally {
+      setQuestionsLoading(false)
+    }
+  }
+
+  // Generate additional questions (1 at a time)
+  const generateMoreQuestions = async () => {
+    setQuestionsLoading(true)
+    try {
+      const excludedQuestions = [...availableQuestions, ...optionalQuestions].map(q => q.text)
+      const newQuestions = await claudeService.generateOptionalQuestions(excludedQuestions, 1)
+      setAvailableQuestions(prev => [...prev, ...newQuestions])
+    } catch (error) {
+      console.error('Error generating additional questions:', error)
+    } finally {
+      setQuestionsLoading(false)
+    }
+  }
 
   // Handle budget select
   const handleBudgetChange = (val) => {
@@ -198,27 +230,44 @@ const PreferencesForm = ({ onSubmit }) => {
               <div className="text-lg mb-4" style={{ fontFamily: 'Instrument Serif, serif', fontSize: '24px', color: '#000' }}>
                 Want to help me find something even more perfect?
               </div>
-              <div className="text-gray-600 text-sm mb-6" style={{ fontFamily: 'Inter, sans-serif' }}>
+              <div className="text-gray-600 text-sm mb-4" style={{ fontFamily: 'Inter, sans-serif' }}>
                 Click on any questions below to add them (optional)
               </div>
             </div>
 
             {/* Available Questions to Add */}
-            <div className="flex flex-wrap gap-3 justify-center mb-6">
-              {availableQuestions
-                .filter(q => !optionalQuestions.find(oq => oq.id === q.id))
-                .map(question => (
+            {questionsLoading ? (
+              <div className="flex justify-center mb-6">
+                <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-3 justify-center mb-6">
+                {availableQuestions
+                  .filter(q => !optionalQuestions.find(oq => oq.id === q.id))
+                  .map(question => (
+                    <button
+                      key={question.id}
+                      onClick={() => addOptionalQuestion(question.id)}
+                      className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-700 transition-colors"
+                      style={{ fontFamily: 'Inter, sans-serif' }}
+                    >
+                      + {question.text}
+                    </button>
+                  ))
+                }
+                {/* Plus button to generate more questions */}
+                {availableQuestions.filter(q => !optionalQuestions.find(oq => oq.id === q.id)).length > 0 && (
                   <button
-                    key={question.id}
-                    onClick={() => addOptionalQuestion(question.id)}
-                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-700 transition-colors"
+                    onClick={generateMoreQuestions}
+                    disabled={questionsLoading}
+                    className="px-4 py-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-full text-sm text-blue-700 transition-colors disabled:opacity-50"
                     style={{ fontFamily: 'Inter, sans-serif' }}
                   >
-                    + {question.text}
+                    + More questions
                   </button>
-                ))
-              }
-            </div>
+                )}
+              </div>
+            )}
 
             {/* Active Questions */}
             <div className="w-full max-w-md space-y-4 mb-8">

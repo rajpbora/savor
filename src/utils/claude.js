@@ -81,6 +81,77 @@ Focus on matching:
 - Party size suitability`
   }
 
+  async generateOptionalQuestions(excludedQuestions = [], count = 3) {
+    const prompt = `You are a food finder assistant. Generate a light-hearted but grounded and direct question to gauge the preferences of the user. These questions should not be related to cuisine, budget, or dietary preferences. Don't make the question related to these previous ones: "${excludedQuestions.join(', ')}"
+
+Here are some example questions for inspiration:
+
+text: 'What atmosphere are you looking for?', placeholder: 'Casual, romantic, family-friendly, lively...',
+text: 'What's the occasion?', placeholder: 'Date night, business meeting, celebration...',
+text: 'Who are you dining with?', placeholder: 'Solo, couple, family, large group...',
+text: 'Any specific cuisine preferences?', placeholder: 'Italian, Asian, Mexican, local specialties...',
+text: 'Any special features you want?', placeholder: 'Outdoor seating, live music, bar area...'
+
+Generate exactly ${count} unique questions in this JSON format:
+{
+  "questions": [
+    {
+      "id": "unique_id",
+      "text": "Question text?",
+      "placeholder": "Example answers..."
+    }
+  ]
+}
+
+Make sure each question is different from the examples and from any excluded questions. Focus on aspects like timing preferences, ambiance, special needs, location preferences, or dining style preferences.`
+
+    // For development, return mock questions if Claude API is not available
+    if (!this.client) {
+      return this.getMockOptionalQuestions(excludedQuestions)
+    }
+
+    try {
+      const response = await this.client.messages.create({
+        model: 'claude-3-haiku-20240307',
+        max_tokens: 1000,
+        temperature: 0.8,
+        messages: [{
+          role: 'user',
+          content: prompt
+        }]
+      })
+
+      const content = response.content[0].text
+      const result = JSON.parse(content)
+      return result.questions
+    } catch (error) {
+      console.error('Claude API error generating questions:', error)
+      console.log('Falling back to mock questions')
+      return this.getMockOptionalQuestions(excludedQuestions, count)
+    }
+  }
+
+  getMockOptionalQuestions(excludedQuestions = [], count = 3) {
+    const allMockQuestions = [
+      { id: 'atmosphere', text: 'What atmosphere are you looking for?', placeholder: 'Casual, romantic, family-friendly, lively...' },
+      { id: 'occasion', text: 'What\'s the occasion?', placeholder: 'Date night, business meeting, celebration...' },
+      { id: 'group', text: 'Who are you dining with?', placeholder: 'Solo, couple, family, large group...' },
+      { id: 'features', text: 'Any special features you want?', placeholder: 'Outdoor seating, live music, bar area...' },
+      { id: 'timing', text: 'What time of day works best?', placeholder: 'Lunch, early dinner, late night...' },
+      { id: 'location', text: 'Any location preferences?', placeholder: 'Downtown, waterfront, quiet neighborhood...' },
+      { id: 'noise', text: 'How do you feel about noise level?', placeholder: 'Quiet and intimate, lively and social...' },
+      { id: 'service', text: 'What service style do you prefer?', placeholder: 'Quick and casual, attentive full service...' },
+      { id: 'parking', text: 'Any parking preferences?', placeholder: 'Valet, street parking, parking garage...' }
+    ]
+
+    // Filter out excluded questions and return the requested count
+    const availableQuestions = allMockQuestions.filter(q => 
+      !excludedQuestions.includes(q.text) && !excludedQuestions.includes(q.id)
+    )
+
+    return availableQuestions.slice(0, count)
+  }
+
   async getRestaurantRecommendations(preferences) {
     // For development, use mock data with simulated Claude reasoning
     if (!this.client) {
