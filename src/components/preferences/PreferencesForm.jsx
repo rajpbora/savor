@@ -3,7 +3,7 @@ import BudgetRange from './BudgetRange'
 
 // Add Instrument Serif font to heading and serif text
 const PreferencesForm = ({ onSubmit }) => {
-  // Carousel step: 0 = budget, 1 = dietary q, 2 = dietary text, 3 = results
+  // Carousel step: 0 = budget, 1 = dietary q, 2 = dietary text, 3 = optional questions, 4 = results
   const [step, setStep] = useState(0)
   const [budget, setBudget] = useState('')
   const [hasDietary, setHasDietary] = useState(null)
@@ -12,7 +12,17 @@ const PreferencesForm = ({ onSubmit }) => {
   const [showGiveMe, setShowGiveMe] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [results, setResults] = useState(null)
-  const [hovered, setHovered] = useState(null);
+  const [hovered, setHovered] = useState(null)
+  const [optionalQuestions, setOptionalQuestions] = useState([])
+  
+  // Available optional questions
+  const availableQuestions = [
+    { id: 'atmosphere', text: 'What atmosphere are you looking for?', placeholder: 'Casual, romantic, family-friendly, lively...' },
+    { id: 'occasion', text: 'What\'s the occasion?', placeholder: 'Date night, business meeting, celebration...' },
+    { id: 'group', text: 'Who are you dining with?', placeholder: 'Solo, couple, family, large group...' },
+    { id: 'cuisine', text: 'Any specific cuisine preferences?', placeholder: 'Italian, Asian, Mexican, local specialties...' },
+    { id: 'features', text: 'Any special features you want?', placeholder: 'Outdoor seating, live music, bar area...' }
+  ];
 
   // Handle budget select
   const handleBudgetChange = (val) => {
@@ -23,8 +33,12 @@ const PreferencesForm = ({ onSubmit }) => {
   // Handle dietary yes/no
   const handleDietary = (val) => {
     setHasDietary(val)
-    if (val === false) setShowNext(true)
-    else setShowNext(false)
+    if (val === false) {
+      // Skip dietary text step and go straight to optional questions
+      setStep(3)
+    } else {
+      setShowNext(false)
+    }
   }
 
   // Handle dietary text
@@ -32,6 +46,26 @@ const PreferencesForm = ({ onSubmit }) => {
     setDietaryText(e.target.value)
     setShowNext(!!e.target.value)
     setShowGiveMe(!!e.target.value)
+  }
+
+  // Handle adding optional questions
+  const addOptionalQuestion = (questionId) => {
+    const question = availableQuestions.find(q => q.id === questionId)
+    if (question && !optionalQuestions.find(q => q.id === questionId)) {
+      setOptionalQuestions(prev => [...prev, { ...question, answer: '' }])
+    }
+  }
+
+  // Handle optional question answer change
+  const handleOptionalAnswer = (questionId, answer) => {
+    setOptionalQuestions(prev => 
+      prev.map(q => q.id === questionId ? { ...q, answer } : q)
+    )
+  }
+
+  // Remove optional question
+  const removeOptionalQuestion = (questionId) => {
+    setOptionalQuestions(prev => prev.filter(q => q.id !== questionId))
   }
 
   // Move to next step
@@ -47,11 +81,17 @@ const PreferencesForm = ({ onSubmit }) => {
     const preferences = {
       budget,
       dietaryRestrictions: hasDietary ? dietaryText : '',
+      optionalPreferences: optionalQuestions.reduce((acc, q) => {
+        if (q.answer.trim()) {
+          acc[q.id] = q.answer.trim()
+        }
+        return acc
+      }, {})
     }
     try {
       const res = await onSubmit(preferences)
       setResults(res)
-      setStep(3)
+      setStep(4)
     } finally {
       setIsLoading(false)
     }
@@ -128,7 +168,7 @@ const PreferencesForm = ({ onSubmit }) => {
               <div className="text-lg mb-4" style={{ fontFamily: 'Instrument Serif, serif', fontSize: '24px', color: '#000' }}>Do you have any dietary restrictions?</div>
               <div className="flex gap-6">
                 <button className={`btn-primary ${hasDietary === true ? '' : 'opacity-60'}`} onClick={() => {handleDietary(true); next();}}>Yes</button>
-                <button className={`btn-primary ${hasDietary === false ? '' : 'opacity-60'}`} onClick={() => {handleDietary(false); next();}}>No</button>
+                <button className={`btn-primary ${hasDietary === false ? '' : 'opacity-60'}`} onClick={() => handleDietary(false)}>No</button>
               </div>
             </div>
           </div>
@@ -147,12 +187,77 @@ const PreferencesForm = ({ onSubmit }) => {
               <button className="mt-2 btn-primary" onClick={next}>Next &rarr;</button>
             )}
             {showGiveMe && (
-              <button className="mt-2 underline text-primary-700" onClick={getRecommendations}>Give me recommendations &rarr;</button>
+              <button className="mt-2 underline text-primary-700" onClick={next}>Continue &rarr;</button>
             )}
           </div>
         </div>
-        {/* Screen 4: Results */}
-        <div className={`absolute inset-0 transition-transform duration-500 ${step === 3 ? 'translate-x-0 opacity-100 z-10' : 'translate-x-full opacity-0 z-0'}`}>
+        {/* Screen 4: Optional Questions */}
+        <div className={`absolute inset-0 transition-transform duration-500 ${step === 3 ? 'translate-x-0 opacity-100 z-10' : step < 3 ? 'translate-x-full opacity-0 z-0' : '-translate-x-full opacity-0 z-0'}`}>
+          <div className="flex flex-col items-center justify-center h-full px-8">
+            <div className="text-center mb-8">
+              <div className="text-lg mb-4" style={{ fontFamily: 'Instrument Serif, serif', fontSize: '24px', color: '#000' }}>
+                Want to help me find something even more perfect?
+              </div>
+              <div className="text-gray-600 text-sm mb-6" style={{ fontFamily: 'Inter, sans-serif' }}>
+                Click on any questions below to add them (optional)
+              </div>
+            </div>
+
+            {/* Available Questions to Add */}
+            <div className="flex flex-wrap gap-3 justify-center mb-6">
+              {availableQuestions
+                .filter(q => !optionalQuestions.find(oq => oq.id === q.id))
+                .map(question => (
+                  <button
+                    key={question.id}
+                    onClick={() => addOptionalQuestion(question.id)}
+                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-700 transition-colors"
+                    style={{ fontFamily: 'Inter, sans-serif' }}
+                  >
+                    + {question.text}
+                  </button>
+                ))
+              }
+            </div>
+
+            {/* Active Questions */}
+            <div className="w-full max-w-md space-y-4 mb-8">
+              {optionalQuestions.map(question => (
+                <div key={question.id} className="relative">
+                  <label className="block text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: 'Inter, sans-serif' }}>
+                    {question.text}
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={question.answer}
+                      onChange={(e) => handleOptionalAnswer(question.id, e.target.value)}
+                      placeholder={question.placeholder}
+                      className="form-input w-full pr-8"
+                      style={{ fontFamily: 'Inter, sans-serif' }}
+                    />
+                    <button
+                      onClick={() => removeOptionalQuestion(question.id)}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Continue Button */}
+            <button 
+              className="btn-primary"
+              onClick={getRecommendations}
+            >
+              Give me recommendations &rarr;
+            </button>
+          </div>
+        </div>
+        {/* Screen 5: Results */}
+        <div className={`absolute inset-0 transition-transform duration-500 ${step === 4 ? 'translate-x-0 opacity-100 z-10' : 'translate-x-full opacity-0 z-0'}`}>
           <div className="flex flex-col items-center justify-center h-full w-full">
             {isLoading ? (
               <div className="text-center py-12">
