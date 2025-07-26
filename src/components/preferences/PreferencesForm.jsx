@@ -191,7 +191,7 @@ const PreferencesForm = ({ onSubmit }) => {
   // Carousel screens
   return (
     <div className="w-full flex flex-col items-center justify-center min-h-[60vh]">
-      <div className="relative w-full max-w-xl overflow-hidden" style={{minHeight: 600}}>
+      <div className={`relative w-full overflow-hidden ${step === 4 ? 'max-w-4xl' : 'max-w-xl'}`} style={{minHeight: step === 4 ? 600 : 600, maxHeight: step === 4 ? '80vh' : 600}}>
         {/* Screen 1: Budget (Frame 1 style) */}
         <div className={`absolute inset-0 transition-transform duration-500 ${step === 0 ? 'translate-x-0 opacity-100 z-10' : '-translate-x-full opacity-0 z-0'}`}>
           <div className="flex flex-col items-center justify-center h-full min-h-[600px] flex-grow">
@@ -284,7 +284,7 @@ const PreferencesForm = ({ onSubmit }) => {
         </div>
         {/* Screen 4: Optional Questions */}
         <div className={`absolute inset-0 transition-transform duration-500 ${step === 3 ? 'translate-x-0 opacity-100 z-10' : step < 3 ? 'translate-x-full opacity-0 z-0' : '-translate-x-full opacity-0 z-0'}`}>
-          <div className="flex flex-col items-center justify-center h-full px-8">
+          <div className="flex flex-col items-center justify-start h-full px-8 overflow-y-auto">
             {/* Show current prompt */}
             <div className="text-center mb-6">
               <div className="text-gray-700 mb-4 text-center font-light whitespace-pre-line" style={{ fontFamily: 'Inter, sans-serif', fontSize: '16px' }}>"{currentPrompt}"</div>
@@ -334,7 +334,7 @@ const PreferencesForm = ({ onSubmit }) => {
             )}
 
             {/* Active Questions */}
-            <div className="w-full max-w-md space-y-4 mb-8">
+            <div className="w-full max-w-md space-y-4 mb-8 flex-1 overflow-y-auto max-h-96">
               {optionalQuestions.map(question => (
                 <div key={question.id} className="relative">
                   <label className="block text-sm font-medium text-gray-700 mb-2" style={{ fontFamily: 'Inter, sans-serif' }}>
@@ -371,7 +371,7 @@ const PreferencesForm = ({ onSubmit }) => {
         </div>
         {/* Screen 5: Results */}
         <div className={`absolute inset-0 transition-transform duration-500 ${step === 4 ? 'translate-x-0 opacity-100 z-10' : 'translate-x-full opacity-0 z-0'}`}>
-          <div className="flex flex-col items-center justify-center h-full w-full p-6">
+          <div className="flex flex-col items-center justify-start h-full w-full p-6 overflow-y-auto">
             {isLoading ? (
               <div className="text-center py-12">
                 <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
